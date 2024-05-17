@@ -1,0 +1,443 @@
+
+//clsMenu
+
+
+public int ITEMID {get; set;}
+        public string ITEMNAME { get; set; }
+        public int QTY { get; set; }
+        public int PRICE { get; set; }
+        public string UPDATE { get; set; }
+        public int ACTION { get; set; }
+
+        clsMainDB obj_clsMainDB = new clsMainDB();
+
+        public void SaveData()
+        {
+            try
+            {
+                obj_clsMainDB.DatatBaseConn();
+                SqlCommand sql = new SqlCommand("SP_Insert_Item", obj_clsMainDB.con);
+                sql.CommandType = CommandType.StoredProcedure;
+                sql.Parameters.AddWithValue("@ItemID", ITEMID);
+                sql.Parameters.AddWithValue("@ItemName", ITEMNAME);
+                sql.Parameters.AddWithValue("@Qty", QTY);
+                sql.Parameters.AddWithValue("@Price", PRICE);
+                sql.Parameters.AddWithValue("@UpdateDate", UPDATE);
+                sql.Parameters.AddWithValue("@action", ACTION);
+                sql.ExecuteNonQuery();
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show(ex.ToString(), "Error in saving Data");
+            }
+            finally
+            {
+                obj_clsMainDB.con.Close();
+            }
+        }
+
+_____________________________________________________________________________________
+
+//clsMainDB
+
+public SqlConnection con;
+        DataSet DS = new DataSet();
+
+        public void DatatBaseConn()
+        {
+            try
+            {
+                con = new SqlConnection(POS73.Properties.Settings.Default.POSCon);
+                if (con.State == ConnectionState.Open)
+                    con.Close();
+                con.Open();
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show(ex.ToString(), "Error in Database connection");
+            }
+        }
+
+        public DataTable SelectData(string SPString)
+        {
+            DataTable DT = new DataTable();
+            try
+            {
+                DatatBaseConn();
+                SqlDataAdapter Adpt = new SqlDataAdapter(SPString,con);
+                Adpt.Fill(DT);
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show(ex.ToString(), "Error in Selecting Data");
+            }
+            finally
+            {
+                con.Close();
+            }
+            return DT;
+        }
+
+        public void ToolStripTextBoxData(ref ToolStripTextBox tstToolStrip, string SPString, string FieldName)
+        {
+            DataTable DT = new DataTable();
+            AutoCompleteStringCollection Source = new AutoCompleteStringCollection();
+            try
+            {
+                DatatBaseConn();
+                SqlDataAdapter Adpt = new SqlDataAdapter(SPString, con);
+                Adpt.Fill(DT);
+                if (DT.Rows.Count > 0)
+                {
+                    tstToolStrip.AutoCompleteCustomSource.Clear();
+                    for (int i = 0; i < DT.Rows.Count; i++)
+                    {
+                        Source.Add(DT.Rows[i][FieldName].ToString());
+                    }
+                    tstToolStrip.AutoCompleteCustomSource = Source;
+                    tstToolStrip.Text = "";
+                    tstToolStrip.Focus();
+                }
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show(ex.ToString(), "Error in ToolStrip TextBox Data");
+            }
+            finally
+            {
+                con.Close();
+            }
+        }
+
+        public void AddCombo(ref ComboBox cboCombo, string SPString, string Display, string Value)
+        {
+            DataTable DT = new DataTable();
+            DataTable DTCombo = new DataTable();
+            DataRow Dr;
+
+            DTCombo.Columns.Add(Display);
+            DTCombo.Columns.Add(Value);
+
+            Dr = DTCombo.NewRow();
+            Dr[Display] = "---Select---";
+            Dr[Value] = 0;
+            DTCombo.Rows.Add(Dr);
+
+            try
+            {
+                DatatBaseConn();
+                SqlDataAdapter Adpt = new SqlDataAdapter(SPString, con);
+                Adpt.Fill(DT);
+                for (int i = 0; i < DT.Rows.Count; i++)
+                {
+                    Dr = DTCombo.NewRow();
+                    Dr[Display] = DT.Rows[i][Display];
+                    Dr[Value] = DT.Rows[i][Value];
+                    DTCombo.Rows.Add(Dr);
+                }
+                cboCombo.DisplayMember = Display;
+                cboCombo.ValueMember = Value;
+                cboCombo.DataSource = DTCombo;
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show(ex.ToString(), "Error in adding Combo");
+            }
+            finally
+            {
+                con.Close();
+            }
+        }
+
+        public void TextBoxData(ref TextBox txtTextBox, string SPString, string FieldName)
+        {
+            DataTable DT = new DataTable();
+            AutoCompleteStringCollection Source = new AutoCompleteStringCollection();
+
+            txtTextBox.AutoCompleteMode = AutoCompleteMode.Suggest;
+            txtTextBox.AutoCompleteSource = AutoCompleteSource.CustomSource;
+
+            try
+            {
+                DatatBaseConn();
+                SqlDataAdapter Adpt = new SqlDataAdapter(SPString, con);
+                Adpt.Fill(DT);
+                if (DT.Rows.Count > 0)
+                {
+                    txtTextBox.AutoCompleteCustomSource.Clear();
+                    for (int i = 0; i < DT.Rows.Count; i++)
+                    {
+                        Source.Add(DT.Rows[i][FieldName].ToString());
+                    }
+                    txtTextBox.AutoCompleteCustomSource = Source;
+                    txtTextBox.Text = "";
+                    txtTextBox.Focus();
+                }
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show(ex.ToString(), "Error in TextBox Data");
+            }
+            finally
+            {
+                con.Close();
+            }
+        }
+
+        public String GetVoucher(string SPString, String Date)
+        {
+            DataTable DT = new DataTable();
+            try
+            {
+                DatatBaseConn();
+                SqlDataAdapter Adpt = new SqlDataAdapter(SPString, con);
+                Adpt.Fill(DT);
+                if(DT.Rows.Count>0 && DT.Rows[0]["Voucher"].ToString() != string.Empty)
+                {
+                    int No = Convert.ToInt32(DT.Rows[0]["Voucher"]) +1;
+                    return (string.Format("S{0:D3}",No) + "-" + Date);
+                }
+                else
+                {
+                    return ("S001-" + Date);
+                }
+            }
+            catch(Exception ex)
+            {
+                MessageBox.Show(ex.ToString(),"Error in GetVoucher");
+                return null;
+            }
+            finally
+            {
+                con.Close();
+            }
+        }
+
+________________________________________________________________________________
+
+//clsSupplier
+
+public int SID { get; set; }
+        public string SNAME { get; set; }
+        public string ADDRESS { get; set; }
+        public string PHONE { get; set; }
+        public string UPDATE { get; set; }
+        public int ACTION { get; set; }
+
+        clsMainDB obj_clsMainDB = new clsMainDB();
+
+        public void SaveData()
+        {
+            try
+            {
+                obj_clsMainDB.DatatBaseConn();
+                SqlCommand sql = new SqlCommand("SP_Insert_Supplier", obj_clsMainDB.con);
+                sql.CommandType = CommandType.StoredProcedure;
+                sql.Parameters.AddWithValue("@SupplierID", SID);
+                sql.Parameters.AddWithValue("@SupplierName", SNAME);
+                sql.Parameters.AddWithValue("@Address", ADDRESS);
+                sql.Parameters.AddWithValue("@Phone", PHONE);
+                sql.Parameters.AddWithValue("@UpdateDate", UPDATE);
+                sql.Parameters.AddWithValue("@action", ACTION);
+                sql.ExecuteNonQuery();
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show(ex.ToString(), "Error in saving Data");
+            }
+            finally
+            {
+                obj_clsMainDB.con.Close();
+            }
+        }
+________________________________________________________________________________
+
+//clsUserSetting
+
+public int USERID { get; set; }
+        public string UNAME { get; set; }
+        public string PASS { get; set; }
+        public string USERLEVEL { get; set; }
+        public string UPDATE { get; set; }
+        public int ACTION { get; set; }
+
+        clsMainDB obj_clsMainDB = new clsMainDB();
+
+        public void SaveData()
+        {
+            try
+            {
+                obj_clsMainDB.DatatBaseConn();
+                SqlCommand sql = new SqlCommand("SP_Insert_UserSetting", obj_clsMainDB.con);
+                sql.CommandType = CommandType.StoredProcedure;
+                sql.Parameters.AddWithValue("@UserID", USERID);
+                sql.Parameters.AddWithValue("@UserName", UNAME);
+                sql.Parameters.AddWithValue("@Password", PASS);
+                sql.Parameters.AddWithValue("@UserLevel", USERLEVEL);
+                sql.Parameters.AddWithValue("@UpdateDate", UPDATE);
+                sql.Parameters.AddWithValue("@action", ACTION);
+                sql.ExecuteNonQuery();
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show(ex.ToString(), "Error in saving Data");
+            }
+            finally
+            {
+                obj_clsMainDB.con.Close();
+            }
+        }
+
+________________________________________________________________________________
+
+//clsPurchase
+
+public int PID { get; set; }
+        public string PDATE { get; set; }
+        public int SUPID { get; set; }
+        public int TOTALAMT { get; set; }
+        public int USERID { get; set; }
+        public int ACTION { get; set; }
+
+        clsMainDB obj_clsMainDB = new clsMainDB();
+
+        public void SaveData()
+        {
+            try
+            {
+                obj_clsMainDB.DatatBaseConn();
+                SqlCommand sql = new SqlCommand("SP_Insert_Purchase", obj_clsMainDB.con);
+                sql.CommandType = CommandType.StoredProcedure;
+                sql.Parameters.AddWithValue("@PurchaseID", PID);
+                sql.Parameters.AddWithValue("@PurchaseDate", PDATE);
+                sql.Parameters.AddWithValue("@SupplierID", SUPID);
+                sql.Parameters.AddWithValue("@TotalAmount", TOTALAMT);
+                sql.Parameters.AddWithValue("@UserID", USERID);
+                sql.Parameters.AddWithValue("@action", ACTION);
+                sql.ExecuteNonQuery();
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show(ex.ToString(), "Error in saving Data");
+            }
+            finally
+            {
+                obj_clsMainDB.con.Close();
+            }
+        }
+
+________________________________________________________________________________
+
+//clsPurchaseDetail
+
+public int PID { get; set; }
+        public string ITEMID { get; set; }
+        public int PQTY { get; set; }
+        public int PPRICE { get; set; }
+        public int ACTION { get; set; }
+
+        clsMainDB obj_clsMainDB = new clsMainDB();
+
+        public void SaveData()
+        {
+            try
+            {
+                obj_clsMainDB.DatatBaseConn();
+                SqlCommand sql = new SqlCommand("SP_Insert_PurchaseDetail", obj_clsMainDB.con);
+                sql.CommandType = CommandType.StoredProcedure;
+                sql.Parameters.AddWithValue("@PurchaseID", PID);
+                sql.Parameters.AddWithValue("@ItemID", ITEMID);
+                sql.Parameters.AddWithValue("@PurchaseQty", PQTY);
+                sql.Parameters.AddWithValue("@PurchasePrice", PPRICE);
+                sql.Parameters.AddWithValue("@action", ACTION);
+                sql.ExecuteNonQuery();
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show(ex.ToString(), "Error in saving Data");
+            }
+            finally
+            {
+                obj_clsMainDB.con.Close();
+            }
+        }
+
+________________________________________________________________________________
+
+//clsSale
+
+public int SID { get; set; }
+        public string VOUCHER { get; set; }
+        public string SDATE { get; set; }
+        public int TOTALAMT { get; set; }
+        public int TAX { get; set; }
+        public int GRANDTOTAL { get; set; }
+        public int USERID { get; set; }
+        public int ACTION { get; set; }
+
+        clsMainDB obj_clsMainDB = new clsMainDB();
+
+        public void SaveData()
+        {
+            try
+            {
+                obj_clsMainDB.DatatBaseConn();
+                SqlCommand sql = new SqlCommand("SP_Insert_Sale", obj_clsMainDB.con);
+                sql.CommandType = CommandType.StoredProcedure;
+                sql.Parameters.AddWithValue("@SaleID", SID);
+                sql.Parameters.AddWithValue("@Voucher", VOUCHER);
+                sql.Parameters.AddWithValue("@SaleDate", SDATE);
+                sql.Parameters.AddWithValue("@TotalAmount", TOTALAMT);
+                sql.Parameters.AddWithValue("@Tax", TAX);
+                sql.Parameters.AddWithValue("@GrandTotal", GRANDTOTAL);
+                sql.Parameters.AddWithValue("@UserID", USERID);
+                sql.Parameters.AddWithValue("@action", ACTION);
+                sql.ExecuteNonQuery();
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show(ex.ToString(), "Error in saving Data");
+            }
+            finally
+            {
+                obj_clsMainDB.con.Close();
+            }
+        }
+
+________________________________________________________________________________
+
+//clsSaleDetail
+
+        public int SID { get; set; }
+        public int ITEMID { get; set; }
+        public int SQTY { get; set; }
+        public int SPRICE { get; set; }
+        public int ACTION { get; set; }
+
+        clsMainDB obj_clsMainDB = new clsMainDB();
+
+        public void SaveData()
+        {
+            try
+            {
+                obj_clsMainDB.DatatBaseConn();
+                SqlCommand sql = new SqlCommand("SP_Insert_SaleDetail", obj_clsMainDB.con);
+                sql.CommandType = CommandType.StoredProcedure;
+                sql.Parameters.AddWithValue("@SaleID", SID);
+                sql.Parameters.AddWithValue("@ItemID", ITEMID);
+                sql.Parameters.AddWithValue("@SaleQty", SQTY);
+                sql.Parameters.AddWithValue("@SalePrice", SPRICE);
+                sql.Parameters.AddWithValue("@action", ACTION);
+                sql.ExecuteNonQuery();
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show(ex.ToString(), "Error in saving Data");
+            }
+            finally
+            {
+                obj_clsMainDB.con.Close();
+            }
+        }
+
+________________________________________________________________________________
